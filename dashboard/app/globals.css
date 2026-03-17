@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Global overrides on top of MUI's CssBaseline */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #050d1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #050d1a; }
+::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.2); border-radius: 3px; }
+
+/* Pulse animation for critical badges */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.pulse { animation: pulse-ring 2s infinite; }
+
+/* Gradient card top accent */
+.kpi-accent-blue::before   { content:''; position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#60a5fa,#2563eb); }
+.kpi-accent-red::before    { content:''; position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ef4444,#991b1b); }
+.kpi-accent-orange::before { content:''; position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f97316,#c2410c); }
+.kpi-accent-teal::before   { content:''; position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#34d399,#059669); }

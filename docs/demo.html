@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHP Dashboard – Chronic Disease Monitoring Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#050d1a;--surface:#0a1628;--card:#0f1e35;--card-h:#152540;--border:rgba(96,165,250,.12);--teal:#34d399;--teal-d:#059669;--text:#e8f0fe;--muted:#94a3b8;--dim:#4a5a72;--crit:#ef4444;--high:#f97316;--med:#fbbf24;--sidebar:240px;--hdr:64px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(96,165,250,.2);border-radius:3px}
+
+/* Layout */
+#login-page,#main-app{position:fixed;inset:0;transition:opacity .3s}
+#main-app{display:flex}
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:10}
+.logo{padding:18px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text{font-size:14px;font-weight:700}.logo-sub{font-size:11px;color:var(--muted)}
+nav{flex:1;padding:14px 10px;overflow-y:auto}
+.nav-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;padding:0 8px;margin:14px 0 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;position:relative;margin-bottom:2px}
+.nav-item:hover{background:var(--card);color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(16,185,129,.08));color:var(--teal);border:1px solid rgba(52,211,153,.2)}
+.badge{margin-left:auto;background:var(--crit);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}70%{box-shadow:0 0 0 6px transparent}}
+.sidebar-footer{padding:14px;border-top:1px solid var(--border)}
+.doc-card{display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border-radius:10px}
+.doc-av{width:36px;height:36px;background:linear-gradient(135deg,var(--teal),#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+.doc-name{font-size:13px;font-weight:600}.doc-role{font-size:11px;color:var(--dim)}
+
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:var(--hdr);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:5}
+.topbar-title{font-size:17px;font-weight:700;flex:1}.topbar-sub{font-size:12px;color:var(--muted)}
+.pcontent{padding:24px;flex:1}
+
+/* Cards & KPIs */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color .2s}
+.card:hover{border-color:rgba(96,165,250,.3)}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;cursor:default;transition:transform .2s}
+.kpi:hover{transform:translateY(-2px);border-color:rgba(96,165,250,.3)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ka)}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.kpi-val{font-size:30px;font-weight:900;line-height:1;margin-bottom:2px;color:var(--kc)}
+.kpi-lbl{font-size:12px;color:var(--muted)}.kpi-chg{font-size:11px;font-weight:700;margin-top:8px;color:var(--crit)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+
+/* Alerts */
+.alert-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.alert-row:last-child{border:none}
+.sev{padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+.sev-critical{background:rgba(239,68,68,.12);color:var(--crit);border:1px solid rgba(239,68,68,.3)}
+.sev-high{background:rgba(249,115,22,.12);color:var(--high);border:1px solid rgba(249,115,22,.3)}
+.sev-medium{background:rgba(234,179,8,.12);color:var(--med);border:1px solid rgba(234,179,8,.3)}
+.cond{padding:2px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.cond-hypertension{background:rgba(244,114,182,.12);color:#f472b6;border:1px solid rgba(244,114,182,.3)}
+.cond-diabetes{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
+.cond-asthma{background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.3)}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border)}
+.tbl td{padding:14px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:var(--card-h);cursor:pointer}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s;font-family:inherit}
+.btn-p{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#050d1a}.btn-p:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 16px rgba(52,211,153,.4)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-g:hover{background:var(--card-h);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:15px;font-weight:700}
+
+/* Chat */
+.chat-wrap{flex:1;display:flex;flex-direction:column}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:70%;padding:11px 14px;border-radius:14px;font-size:13px;line-height:1.5}
+.bubble.doc{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);align-self:flex-start;border-bottom-left-radius:3px}
+.bubble.pat{background:var(--card-h);border:1px solid var(--border);align-self:flex-end;border-bottom-right-radius:3px}
+.chat-input{border-top:1px solid var(--border);padding:14px 20px;display:flex;gap:10px;background:var(--surface)}
+input.inp,textarea.inp{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:13px;padding:9px 13px;width:100%;outline:none;transition:border-color .18s}
+input.inp:focus,textarea.inp:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(52,211,153,.1)}
+input.inp::placeholder,textarea.inp::placeholder{color:var(--dim)}
+select.inp{appearance:none;cursor:pointer}
+
+/* Pages */
+.page{display:none}.page.active{display:block}
+
+/* Login */
+#login-page{background:radial-gradient(ellipse at 20% 50%,rgba(52,211,153,.07) 0,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(99,102,241,.07) 0,transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px;width:390px;max-width:95vw}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-icon{width:58px;height:58px;background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;box-shadow:0 8px 28px rgba(52,211,153,.3)}
+.login-title{font-size:22px;font-weight:800}.login-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.form-grp{margin-bottom:16px}.form-lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.demo-box{margin-top:20px;padding:14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:12px}
+
+/* Charts */
+.chart-wrap{position:relative;height:180px}
+.chart-wrap-lg{position:relative;height:220px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN PAGE ═══════════════════ -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-icon">🏥</div>
+      <div class="login-title">CHP Dashboard</div>
+      <div class="login-sub">Chronic Disease Monitoring Platform</div>
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">Email Address</label>
+      <input id="email" class="inp" type="email" value="doctor@hospital.com" style="width:100%">
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">Password</label>
+      <input id="password" class="inp" type="password" value="password123" style="width:100%">
+    </div>
+    <button id="login-btn" class="btn btn-p" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()">🔐 Sign In to Dashboard</button>
+    <div class="demo-box">
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:6px">Demo Credentials</div>
+      <div>📧 doctor@hospital.com &nbsp;&nbsp; 🔑 password123</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="main-app" style="display:none">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🏥</div>
+      <div>
+        <div class="logo-text">CHP Monitor</div>
+        <div class="logo-sub">Clinical Dashboard</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" onclick="showPage('overview',this)"><span>🏠</span> Overview</div>
+      <div class="nav-item" onclick="showPage('patients',this)"><span>👥</span> Patients</div>
+      <div class="nav-item" onclick="showPage('alerts',this)"><span>🚨</span> Alerts <span class="badge">5</span></div>
+      <div class="nav-item" onclick="showPage('messages',this)"><span>💬</span> Messages <span class="badge" style="background:var(--high)">2</span></div>
+      <div class="nav-item" onclick="showPage('analytics',this)"><span>📊</span> Analytics</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="doc-card">
+        <div class="doc-av">AO</div>
+        <div>
+          <div class="doc-name">Dr. Amina Odhiambo</div>
+          <div class="doc-role">Cardiology</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <!-- ─── OVERVIEW ─── -->
+    <div id="page-overview" class="page active" style="display:flex;flex-direction:column;flex:1">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title">Overview</div>
+          <div class="topbar-sub">Monday, 9 March 2026 · Nairobi General Hospital</div>
+        </div>
+        <button class="btn btn-p btn-sm">+ Add Patient</button>
+      </div>
+      <div class="pcontent">
+        <div style="margin-bottom:22px">
+          <h1 style="font-size:22px;font-weight:800">Good morning, Dr. Odhiambo 👋</h1>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">You have <strong style="color:var(--crit)">5 unacknowledged alerts</strong> and <strong style="color:var(--med)">7 patients</strong> under monitoring.</p>
+        </div>
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi" style="--ka:linear-gradient(90deg,#60a5fa,#60a5fa66);--kc:#60a5fa">
+            <div class="kpi-icon" style="background:rgba(96,165,250,.12)">👥</div>
+            <div class="kpi-val">7</div>
+            <div class="kpi-lbl">Total Patients</div>
+            <div class="kpi-chg" style="color:var(--teal)">↑ +2 this month</div>
+          </div>
+          <div class="kpi" style="--ka:linear-gradient(90deg,#ef4444,#ef444466);--kc:#ef4444">
+            <div class="kpi-icon" style="background:rgba(239,68,68,.12)">🚨</div>
+            <div class="kpi-val">5</div>
+            <div class="kpi-lbl">Active Alerts</div>
+            <div class="kpi-chg">↑ 3 critical</div>
+          </div>
+          <div class="kpi" style="--ka:linear-gradient(90deg,#f97316,#f9731666);--kc:#f97316">
+            <div class="kpi-icon" style="background:rgba(249,115,22,.12)">📈</div>
+            <div class="kpi-val">3</div>
+            <div class="kpi-lbl">Critical Readings</div>
+            <div class="kpi-chg">Last 24 hours</div>
+          </div>
+          <div class="kpi" style="--ka:linear-gradient(90deg,#34d399,#34d39966);--kc:#34d399">
+            <div class="kpi-icon" style="background:rgba(52,211,153,.12)">💊</div>
+            <div class="kpi-val">71%</div>
+            <div class="kpi-lbl">Adherence Rate</div>
+            <div class="kpi-chg" style="color:var(--med)">↓ −8% vs last week</div>
+          </div>
+        </div>
+        <!-- Charts row -->
+        <div class="grid2">
+          <div class="card">
+            <div class="section-hdr">
+              <div class="section-title">📈 BP Trend – John Mwangi</div>
+              <span class="cond cond-hypertension">Hypertension</span>
+            </div>
+            <div class="chart-wrap"><canvas id="bpChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-hdr">
+              <div class="section-title">🩺 Patient Conditions</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;height:180px">
+              <div style="width:160px;flex-shrink:0"><canvas id="condChart"></canvas></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:10px;height:10px;border-radius:50%;background:#f472b6;flex-shrink:0"></div><span style="color:var(--muted);flex:1">Hypertension</span><strong style="color:#f472b6">3</strong></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:10px;height:10px;border-radius:50%;background:#60a5fa;flex-shrink:0"></div><span style="color:var(--muted);flex:1">Diabetes</span><strong style="color:#60a5fa">2</strong></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:10px;height:10px;border-radius:50%;background:#a78bfa;flex-shrink:0"></div><span style="color:var(--muted);flex:1">Asthma</span><strong style="color:#a78bfa">1</strong></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:10px;height:10px;border-radius:50%;background:#34d399;flex-shrink:0"></div><span style="color:var(--muted);flex:1">Multiple</span><strong style="color:#34d399">1</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Recent alerts -->
+        <div class="card">
+          <div class="section-hdr">
+            <div class="section-title">🚨 Recent Alerts</div>
+            <button class="btn btn-g btn-sm" onclick="showPage('alerts',null)">View all</button>
+          </div>
+          <div class="alert-row">
+            <span class="sev sev-critical">critical</span>
+            <div style="flex:1"><div style="font-weight:700;font-size:13px">John Mwangi</div><div style="font-size:12px;color:var(--muted)">Critically high blood pressure: 182/115 mmHg</div></div>
+            <span style="font-size:11px;color:var(--dim)">2h ago</span>
+          </div>
+          <div class="alert-row">
+            <span class="sev sev-high">high</span>
+            <div style="flex:1"><div style="font-weight:700;font-size:13px">David Otieno</div><div style="font-size:12px;color:var(--muted)">Patient reported severe symptoms: chest pain, dizziness</div></div>
+            <span style="font-size:11px;color:var(--dim)">30m ago</span>
+          </div>
+          <div class="alert-row">
+            <span class="sev sev-high">high</span>
+            <div style="flex:1"><div style="font-weight:700;font-size:13px">Mary Achieng</div><div style="font-size:12px;color:var(--muted)">High blood glucose detected: 13.2 mmol/L</div></div>
+            <span style="font-size:11px;color:var(--dim)">5h ago</span>
+          </div>
+          <div class="alert-row">
+            <span class="sev sev-medium">medium</span>
+            <div style="flex:1"><div style="font-weight:700;font-size:13px">Samuel Kamau</div><div style="font-size:12px;color:var(--muted)">Medication 'Metformin' not logged for 3+ days</div></div>
+            <span style="font-size:11px;color:var(--dim)">3h ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PATIENTS ─── -->
+    <div id="page-patients" class="page" style="flex:1;flex-direction:column">
+      <div class="topbar">
+        <div><div class="topbar-title">Patients</div><div class="topbar-sub">7 patients under monitoring</div></div>
+        <button class="btn btn-p btn-sm">+ Enrol Patient</button>
+      </div>
+      <div class="pcontent">
+        <div style="display:flex;gap:12px;margin-bottom:16px">
+          <input id="patient-search" class="inp" placeholder="🔍  Search by name or phone…" oninput="filterPts(this.value)" style="flex:1">
+          <select id="condition-filter" class="inp" onchange="filterPts()" style="width:180px">
+            <option value="">All Conditions</option>
+            <option value="hypertension">Hypertension</option>
+            <option value="diabetes">Diabetes</option>
+            <option value="asthma">Asthma</option>
+          </select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="tbl" id="pt-table">
+            <thead><tr>
+              <th>Patient</th><th>Condition</th><th>Age</th><th>Last Reading</th><th>Risk</th><th>Alerts</th><th></th>
+            </tr></thead>
+            <tbody id="pt-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ALERTS ─── -->
+    <div id="page-alerts" class="page" style="flex:1;flex-direction:column">
+      <div class="topbar">
+        <div><div class="topbar-title">Alerts</div><div class="topbar-sub">5 unacknowledged</div></div>
+      </div>
+      <div class="pcontent">
+        <div style="display:flex;gap:12px;margin-bottom:22px">
+          <div class="card" style="padding:12px 18px;flex:0 0 auto;display:flex;align-items:center;gap:12px"><span class="sev sev-critical">critical</span><strong style="font-size:22px;color:var(--crit)">2</strong></div>
+          <div class="card" style="padding:12px 18px;flex:0 0 auto;display:flex;align-items:center;gap:12px"><span class="sev sev-high">high</span><strong style="font-size:22px;color:var(--high)">2</strong></div>
+          <div class="card" style="padding:12px 18px;flex:0 0 auto;display:flex;align-items:center;gap:12px"><span class="sev sev-medium">medium</span><strong style="font-size:22px;color:var(--med)">1</strong></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px" id="alert-filters">
+          <button class="btn btn-p btn-sm active-filter" onclick="filterAlerts('all',this)">All</button>
+          <button class="btn btn-g btn-sm" onclick="filterAlerts('critical',this)">Critical</button>
+          <button class="btn btn-g btn-sm" onclick="filterAlerts('high',this)">High</button>
+        </div>
+        <div class="card" id="alert-list" style="padding:4px 0"></div>
+      </div>
+    </div>
+
+    <!-- ─── MESSAGES ─── -->
+    <div id="page-messages" class="page" style="flex:1;display:flex;flex-direction:column;height:calc(100vh - 0px)">
+      <div class="topbar"><div><div class="topbar-title">Messages</div><div class="topbar-sub">Patient communications</div></div></div>
+      <div style="display:flex;flex:1;overflow:hidden">
+        <div style="width:270px;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface)">
+          <div id="thread-john" onclick="selectThread('john',this)" style="padding:14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid var(--teal);background:var(--card)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div class="av" style="width:30px;height:30px;font-size:10px">JM</div>
+              <div><div style="font-size:13px;font-weight:700">John Mwangi</div><span class="cond cond-hypertension" style="font-size:9px">hypertension</span></div>
+            </div>
+            <div style="font-size:11px;color:var(--dim);padding-left:38px">Please visit the clinic this Friday…</div>
+          </div>
+          <div id="thread-mary" onclick="selectThread('mary',this)" style="padding:14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div class="av" style="width:30px;height:30px;font-size:10px;background:linear-gradient(135deg,#3b82f6,#1d4ed8)">MA</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700">Mary Achieng</div><span class="cond cond-diabetes" style="font-size:9px">diabetes</span></div>
+              <div style="background:var(--crit);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">1</div>
+            </div>
+            <div style="font-size:11px;color:var(--dim);padding-left:38px">Sorry doctor, I have been away…</div>
+          </div>
+          <div id="thread-david" onclick="selectThread('david',this)" style="padding:14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div class="av" style="width:30px;height:30px;font-size:10px;background:linear-gradient(135deg,#7c3aed,#4c1d95)">DO</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700">David Otieno</div><span class="cond cond-asthma" style="font-size:9px">asthma</span></div>
+              <div style="background:var(--crit);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">2</div>
+            </div>
+            <div style="font-size:11px;color:var(--dim);padding-left:38px">It is getting worse. Should I come in?</div>
+          </div>
+        </div>
+        <div class="chat-wrap">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface)">
+            <div class="av">JM</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">John Mwangi</div>
+              <span class="cond cond-hypertension">hypertension</span>
+            </div>
+          </div>
+          <div class="chat-msgs" id="chat-msgs">
+            <div><div style="font-size:10px;color:var(--dim);margin-bottom:3px">🩺 You · Yesterday 10:00 AM</div><div class="bubble doc">John, your blood pressure readings have been concerning this week. Please avoid salty foods and take your medication at the prescribed times.</div></div>
+            <div style="align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end"><div style="font-size:10px;color:var(--dim);margin-bottom:3px">👤 John · Yesterday 2:15 PM</div><div class="bubble pat">Thank you doctor. I have been under a lot of stress at work. I will try to rest more.</div></div>
+            <div><div style="font-size:10px;color:var(--dim);margin-bottom:3px">🩺 You · Today 6:00 AM</div><div class="bubble doc">Please visit the clinic this Friday for a follow-up checkup. Your readings are still elevated.</div></div>
+          </div>
+          <div class="chat-input">
+            <input id="message-input" class="inp" placeholder="Message John Mwangi…" style="flex:1" onkeydown="if(event.key==='Enter')sendMsg()">
+            <button id="send-message-btn" class="btn btn-p" onclick="sendMsg()">Send 📤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ANALYTICS ─── -->
+    <div id="page-analytics" class="page" style="flex:1;flex-direction:column">
+      <div class="topbar">
+        <div><div class="topbar-title">Analytics & Reports</div><div class="topbar-sub">Population health trends · March 2026</div></div>
+        <button class="btn btn-g btn-sm">⬇ Export PDF</button>
+      </div>
+      <div class="pcontent">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px">
+          <div class="card"><div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:8px">Avg Blood Pressure</div><div style="font-size:26px;font-weight:900;color:#f472b6">151/97</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Hypertension cohort</div></div>
+          <div class="card"><div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:8px">Avg Glucose</div><div style="font-size:26px;font-weight:900;color:#60a5fa">8.3 mmol/L</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Diabetes cohort</div></div>
+          <div class="card"><div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:8px">Medication Adherence</div><div style="font-size:26px;font-weight:900;color:#fbbf24">71%</div><div style="font-size:12px;color:var(--crit);margin-top:4px">↓ vs 89% last month</div></div>
+        </div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="section-hdr"><div class="section-title">🩺 Blood Pressure Trends (30 days)</div><span class="cond cond-hypertension">Hypertension Patients</span></div>
+          <div class="chart-wrap-lg"><canvas id="bpTrendChart"></canvas></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="section-hdr"><div class="section-title">🩸 Glucose Trends</div><span class="cond cond-diabetes">Diabetes</span></div>
+            <div class="chart-wrap"><canvas id="glucChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-bottom:14px">💊 Medication Adherence Trend</div>
+            <div class="chart-wrap"><canvas id="adhChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────
+const patients = [
+  {id:'p1',name:'John Mwangi',  initials:'JM',age:58,gender:'Male',  phone:'0712345678',condition:'hypertension',risk:'critical',alert:2,reading:'182/115 mmHg', rdate:'2h ago'},
+  {id:'p2',name:'Mary Achieng', initials:'MA',age:45,gender:'Female', phone:'0723456789',condition:'diabetes',    risk:'high',    alert:1,reading:'13.2 mmol/L',  rdate:'5h ago'},
+  {id:'p3',name:'David Otieno', initials:'DO',age:34,gender:'Male',  phone:'0734567890',condition:'asthma',      risk:'high',    alert:1,reading:'—',              rdate:'30m ago'},
+  {id:'p4',name:'Grace Njeri',  initials:'GN',age:62,gender:'Female', phone:'0745678901',condition:'hypertension',risk:'high',    alert:1,reading:'165/105 mmHg',  rdate:'1h ago'},
+  {id:'p5',name:'Samuel Kamau', initials:'SK',age:51,gender:'Male',  phone:'0756789012',condition:'diabetes',    risk:'medium',  alert:1,reading:'8.4 mmol/L',    rdate:'6h ago'},
+  {id:'p6',name:'Faith Wambui', initials:'FW',age:39,gender:'Female', phone:'0767890123',condition:'hypertension',risk:'low',    alert:0,reading:'138/88 mmHg',   rdate:'1d ago'},
+  {id:'p7',name:'Peter Omondi', initials:'PO',age:67,gender:'Male',  phone:'0778901234',condition:'diabetes',    risk:'low',    alert:0,reading:'6.8 mmol/L',    rdate:'2d ago'},
+]
+const alertData = [
+  {sev:'critical',name:'John Mwangi',  cond:'hypertension',msg:'Critically high blood pressure: 182/115 mmHg',time:'2h ago'},
+  {sev:'high',    name:'David Otieno', cond:'asthma',      msg:'Patient reported severe symptoms: chest pain, dizziness',time:'30m ago'},
+  {sev:'high',    name:'Grace Njeri',  cond:'hypertension',msg:'High blood pressure detected: 165/105 mmHg',time:'1h ago'},
+  {sev:'high',    name:'Mary Achieng', cond:'diabetes',    msg:'High blood glucose detected: 13.2 mmol/L',time:'5h ago'},
+  {sev:'medium',  name:'Samuel Kamau', cond:'diabetes',    msg:"Medication 'Metformin' not logged for 3+ days",time:'3h ago'},
+]
+const ackd = new Set()
+
+// ─── Login ─────────────────────────────────────────────────────
+function doLogin(){
+  const e=document.getElementById('email').value
+  const p=document.getElementById('password').value
+  if(e==='doctor@hospital.com'&&p==='password123'){
+    document.getElementById('login-page').style.display='none'
+    document.getElementById('main-app').style.display='flex'
+    initCharts()
+    renderPatients(patients)
+    renderAlerts('all')
+  }else{ alert('Use: doctor@hospital.com / password123') }
+}
+document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()})
+
+// ─── Page navigation ──────────────────────────────────────────
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none')
+  const pg=document.getElementById('page-'+id)
+  pg.style.display=(id==='messages')?'flex':'block'
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  if(el)el.classList.add('active')
+}
+
+// ─── Patients ─────────────────────────────────────────────────
+function renderPatients(pts){
+  const sb=document.getElementById('pt-body'); sb.innerHTML=''
+  pts.forEach(p=>{
+    sb.innerHTML+=`<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="av">${p.initials}</div><div><div style="font-weight:700">${p.name}</div><div style="font-size:11px;color:var(--dim)">${p.phone}</div></div></div></td>
+      <td><span class="cond cond-${p.condition}">${p.condition}</span></td>
+      <td>${p.age} · ${p.gender}</td>
+      <td><div style="font-weight:700">${p.reading}</div><div style="font-size:11px;color:var(--dim)">${p.rdate}</div></td>
+      <td><span class="sev sev-${p.risk}">${p.risk}</span></td>
+      <td>${p.alert>0?`<span style="color:var(--crit);font-weight:700">${p.alert} open</span>`:'<span style="color:var(--dim)">None</span>'}</td>
+      <td><button class="btn btn-g btn-sm">View →</button></td>
+    </tr>`
+  })
+}
+function filterPts(q=''){
+  const cond=document.getElementById('condition-filter').value
+  const srch=document.getElementById('patient-search').value.toLowerCase()
+  renderPatients(patients.filter(p=>(!srch||p.name.toLowerCase().includes(srch)||p.phone.includes(srch))&&(!cond||p.condition===cond)))
+}
+
+// ─── Alerts ───────────────────────────────────────────────────
+function renderAlerts(fl){
+  const box=document.getElementById('alert-list'); box.innerHTML=''
+  const icons={critical:'🫀',high:'🤒',medium:'💊'}
+  alertData.filter(a=>fl==='all'||a.sev===fl).forEach((a,i)=>{
+    const isAckd=ackd.has(i)
+    box.innerHTML+=`<div id="al-${i}" class="alert-row" style="padding:14px 18px;opacity:${isAckd?0.4:1}">
+      <span style="font-size:22px">${icons[a.sev]||'⚠️'}</span>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span class="sev sev-${a.sev}">${a.sev}</span>
+          <span style="font-weight:700;font-size:13px">${a.name}</span>
+          <span class="cond cond-${a.cond}">${a.cond}</span>
+        </div>
+        <div style="font-size:13px">${a.msg}</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">${a.time}</div>
+      </div>
+      ${!isAckd?`<button id="ack-${i}" class="btn btn-p btn-sm" onclick="ackAlert(${i})">Acknowledge</button>`:
+        '<span style="font-size:11px;color:var(--teal)">✓ Acknowledged</span>'}
+    </div>`
+  })
+}
+function ackAlert(i){ ackd.add(i); renderAlerts('all') }
+function filterAlerts(fl,btn){
+  document.querySelectorAll('#alert-filters .btn').forEach(b=>{ b.classList.remove('btn-p'); b.classList.add('btn-g') })
+  btn.classList.remove('btn-g'); btn.classList.add('btn-p')
+  renderAlerts(fl)
+}
+
+// ─── Messages ─────────────────────────────────────────────────
+function selectThread(id,el){
+  document.querySelectorAll('[id^=thread-]').forEach(t=>{ t.style.background='transparent'; t.style.borderLeft='3px solid transparent' })
+  el.style.background='var(--card)'; el.style.borderLeft='3px solid var(--teal)'
+}
+function sendMsg(){
+  const inp=document.getElementById('message-input'); const txt=inp.value.trim(); if(!txt)return
+  const box=document.getElementById('chat-msgs')
+  box.innerHTML+=`<div style="align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end"><div style="font-size:10px;color:var(--dim);margin-bottom:3px">🩺 You · Just now</div><div class="bubble pat">${txt}</div></div>`
+  inp.value=''; box.scrollTop=box.scrollHeight
+}
+document.getElementById('message-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter')sendMsg() })
+
+// ─── Charts ───────────────────────────────────────────────────
+function initCharts(){
+  const days=Array.from({length:30},(_,i)=>`D${i+1}`)
+  const bpSys=days.map((_,i)=>128+i*1.8+(i%3)*3)
+  const bpDia=days.map((_,i)=>83+i*0.8)
+
+  const cOpts=(label,data,color,fill=true)=>({
+    type:'line',data:{labels:days,datasets:[{label,data,borderColor:color,backgroundColor:fill?color+'22':'transparent',fill,tension:0.4,borderWidth:2,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'}},y:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'}}}}
+  })
+
+  // Overview BP chart
+  new Chart('bpChart',{type:'line',data:{labels:days,datasets:[
+    {label:'Systolic',data:bpSys,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.1)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+    {label:'Diastolic',data:bpDia,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.08)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'}},y:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'},min:70,max:200}}}})
+
+  // Condition donut
+  new Chart('condChart',{type:'doughnut',data:{labels:['Hypertension','Diabetes','Asthma','Multiple'],
+    datasets:[{data:[3,2,1,1],backgroundColor:['#f472b6','#60a5fa','#a78bfa','#34d399'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false}}}})
+
+  // Analytics BP trend
+  const days2=Array.from({length:30},(_,i)=>`M${i+1}`)
+  const john=days2.map((_,i)=>128+i*1.8+(i%3)*2)
+  const grace=days2.map((_,i)=>143+i*0.5+(i%5)*3)
+  new Chart('bpTrendChart',{type:'line',data:{labels:days2,datasets:[
+    {label:'John Mwangi',data:john,borderColor:'#ef4444',backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:0},
+    {label:'Grace Njeri',data:grace,borderColor:'#f472b6',backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+    scales:{x:{ticks:{color:'#4a5a72',font:{size:10}},grid:{color:'rgba(96,165,250,.06)'}},y:{ticks:{color:'#4a5a72',font:{size:10}},grid:{color:'rgba(96,165,250,.06)'},min:110,max:205}}}})
+
+  // Glucose
+  new Chart('glucChart',{type:'line',data:{labels:days2,datasets:[
+    {label:'Mary Achieng',data:days2.map((_,i)=>6.4+(i%7)*1.0),borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.12)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+    {label:'Samuel Kamau',data:days2.map((_,i)=>7.1+(i%5)*0.8),borderColor:'#34d399',backgroundColor:'rgba(52,211,153,.08)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}}},
+    scales:{x:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'}},y:{ticks:{color:'#4a5a72',font:{size:9}},grid:{color:'rgba(96,165,250,.06)'}}}}})
+
+  // Adherence
+  new Chart('adhChart',{type:'line',data:{labels:['Week 1','Week 2','Week 3','Week 4'],datasets:[{label:'Adherence %',data:[92,87,78,71],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,.12)',fill:true,tension:0.4,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fbbf24'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#4a5a72',font:{size:10}},grid:{color:'rgba(96,165,250,.06)'}},y:{ticks:{color:'#4a5a72',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(96,165,250,.06)'},min:50,max:100}}}})
+}
+</script>
+</body>
+</html>
