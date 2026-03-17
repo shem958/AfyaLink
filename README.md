@@ -1,4 +1,4 @@
-# 🏥 Chronic Disease Monitoring Platform
+# 🏥 AfyaLink - Chronic Disease Monitoring Platform
 
 A two-sided health platform connecting patients and clinicians for real-time chronic disease monitoring.
 
